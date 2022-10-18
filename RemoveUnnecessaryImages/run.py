@@ -141,7 +141,13 @@ def calcHist() -> None:
   files.sort()
   for file in files:
 
-    if file == '.DS_Store' or file == TARGET_FILE or file[0] == '.':
+    # 最初の参照画像をそのまま保存
+    if file == TARGET_FILE:
+      shutil.copyfile(target_img_path, OUT_DIR + file)
+      continue
+
+    # 画像ではないものを検査しないようにスルー
+    if file[0] == '.' or not '.jpg' in file:
       continue
     # print(file)
 
