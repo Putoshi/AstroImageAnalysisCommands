@@ -3,6 +3,7 @@
 
 # 設定ファイル
 import configparser
+import math
 
 # ログ出力用ライブラリのインポート
 from logging import basicConfig, getLogger, StreamHandler, DEBUG, INFO, ERROR
@@ -57,9 +58,8 @@ HIST_THRESHOLD = float(config['RemoveUnnecessaryImages']['HIST_THRESHOLD'])
 
 
 def run() -> None:
-  # logger.debug("test")
   calcHist()
-
+  # stabilize()
   # img = cv2.imread(IMG_DIR + TARGET_FILE)
   # img = cv2.resize(img, IMG_SIZE)
   # calcCenter(img)
@@ -108,23 +108,47 @@ def calcCenter(out_path, img):
 
         insideOfRange = True
 
-      # # 平行移動の変換行列を作成
-      # afin_matrix = np.float32([[1,0,dx/2],[0,1,dy/2]])
-      #
-      # # アファイン変換適用
-      # img = cv2.warpAffine(
-      #   img,           # 入力画像
-      #   afin_matrix,   # 行列
-      #   (W,W)  # 解像度
-      # )
-
-
     # cv2.imwrite(out_path, img)
   else:
     logger.debug("検出なし")
 
   return insideOfRange
 
+# 微振動があるのでスタビライズする
+# def stabilize(imgUrl1, imgUrl2, outputUrl):
+#   # img1 = cv2.imread(IMG_DIR + '202210010000.jpg', cv2.IMREAD_GRAYSCALE)
+#   img1 = cv2.imread(imgUrl1, cv2.IMREAD_GRAYSCALE)
+#   img1 = cv2.resize(img1, IMG_SIZE)
+#   #切り取り範囲の指定
+#   cropped_image1 = img1[int(IMG_SIZE[0]*0.05):int(IMG_SIZE[0]*0.95), int(IMG_SIZE[0]*0.05):int(IMG_SIZE[0]*0.95)]
+#
+#
+#   # img2 = cv2.imread(IMG_DIR + '202210010030.jpg', cv2.IMREAD_GRAYSCALE)
+#   img2 = cv2.imread(imgUrl2, cv2.IMREAD_GRAYSCALE)
+#   img2 = cv2.resize(img2, IMG_SIZE)
+#   #切り取り範囲の指定
+#   cropped_image2 = img2[int(IMG_SIZE[0]*0.05):int(IMG_SIZE[0]*0.95), int(IMG_SIZE[0]*0.05):int(IMG_SIZE[0]*0.95)]
+#
+#   # 位相限定相関法
+#   (x, y), response = cv2.phaseCorrelate(cropped_image1.astype(np.float32), cropped_image2.astype(np.float32))
+#
+#   dx = int(x*4)
+#   dy = int(y*4)
+#
+#   if math.fabs(dx) > 1 or math.fabs(dy) > 1:
+#     # 平行移動の変換行列を作成
+#     afin_matrix = np.float32([[1, 0, -dx],[0, 1, -dy]])
+#
+#     # アファイン変換適用
+#     img = cv2.warpAffine(
+#       cv2.imread(imgUrl2),
+#       afin_matrix,   # 行列
+#       (4096, 4096)  # 解像度
+#     )
+#     logger.debug('スタビライズ X: %s  Y: %s', dx, dy)
+#     cv2.imwrite(outputUrl, img)
+#   else:
+#     shutil.copyfile(imgUrl2, outputUrl)
 
 
 # 壊れた画像を除くために特徴点差分を取って類似度が低いものを除去
@@ -167,16 +191,15 @@ def calcHist() -> None:
       if insideOfRange:
         logger.debug('ズレ検証OK: %s' % (file))
         shutil.copyfile(comparing_img_path, OUT_DIR + file)
+
+        # スタビライズして保存
+        # stabilize(target_img_path, comparing_img_path, OUT_DIR + file)
+
+        target_hist = comparing_hist
+        target_img_path = comparing_img_path
       else:
         logger.debug('ズレ検証NG: %s' % (file))
 
-      # shutil.copyfile(comparing_img_path, OUT_DIR + file)
-      target_hist = comparing_hist
-
-
-
-      # print(file, ret)
-      # os.remove(comparing_img_path)
     else:
       logger.debug("REMOVE!!  %s  %s", file, ret)
       # os.remove(comparing_img_path)
