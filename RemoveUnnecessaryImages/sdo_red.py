@@ -3,7 +3,6 @@
 
 # 設定ファイル
 import configparser
-import math
 
 # ログ出力用ライブラリのインポート
 from logging import basicConfig, getLogger, StreamHandler, DEBUG, INFO, ERROR
@@ -42,19 +41,24 @@ TARGET_FILE = '202210010000.jpg'
 # IMG_DIR = os.path.abspath(os.path.dirname(__file__)) + '/img/'
 
 # 元素材
-IMG_DIR = config['RemoveUnnecessaryImages']['IMG_DIR']
+IMG_DIR = config['SDO_RED']['IMG_DIR']
 
 # 出力先
-OUT_DIR = config['RemoveUnnecessaryImages']['OUT_DIR']
+OUT_DIR = config['SDO_RED']['OUT_DIR']
+
+# 判定から外れた画像のファイル名を保存するJSON
+REMOVE_LIST = config['SDO_RED']['REMOVE_LIST']
 
 # 解析時のイメージサイズ
 IMG_SIZE = (
-  int(config['RemoveUnnecessaryImages']['ANALYSIS_IMG_SIZE']),
-  int(config['RemoveUnnecessaryImages']['ANALYSIS_IMG_SIZE'])
+  int(config['SDO_RED']['ANALYSIS_IMG_SIZE']),
+  int(config['SDO_RED']['ANALYSIS_IMG_SIZE'])
 )
 
 # 解析時のイメージサイズ
-HIST_THRESHOLD = float(config['RemoveUnnecessaryImages']['HIST_THRESHOLD'])
+HIST_THRESHOLD = float(config['SDO_RED']['HIST_THRESHOLD'])
+
+removeList = []
 
 
 def run() -> None:
@@ -197,13 +201,23 @@ def calcHist() -> None:
 
         target_hist = comparing_hist
         target_img_path = comparing_img_path
+
       else:
         logger.debug('ズレ検証NG: %s' % (file))
+        writeRemoveList(file)
+
 
     else:
       logger.debug("REMOVE!!  %s  %s", file, ret)
       # os.remove(comparing_img_path)
+      writeRemoveList(file)
 
+def writeRemoveList(filename) -> None:
+  removeList.append(filename)
+
+  with open(REMOVE_LIST, 'w') as f:
+    for d in removeList:
+      f.write("%s\n" % d)
 
 class TerminatedExecption(Exception):
   pass
@@ -263,4 +277,3 @@ if __name__ == '__main__':
 
   # 終了
   exit()
-
