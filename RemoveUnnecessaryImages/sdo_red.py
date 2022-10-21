@@ -31,6 +31,8 @@ import shutil
 import numpy as np
 
 
+from find_rectangle import get_receipt_contours
+
 # --------------------------------------------------
 # configparserの宣言とiniファイルの読み込み
 # --------------------------------------------------
@@ -64,10 +66,17 @@ removeList = []
 def run() -> None:
   calcHist()
   # stabilize()
-  # img = cv2.imread(IMG_DIR + TARGET_FILE)
-  # img = cv2.resize(img, IMG_SIZE)
-  # calcCenter(img)
 
+  # img = cv2.imread('/Volumes/Transcend/img/sdo_retouch/202210010850.jpg')
+  # img = cv2.imread('/Volumes/Transcend/img/sdo_retouch/202210010010.jpg')
+  # img = cv2.resize(img, IMG_SIZE)
+  # logger.debug(getLoss(img))
+
+  # calcCenter('/Users/takeda/Downloads/replace.jpg', img)
+
+
+def getLoss(img):
+  return get_receipt_contours(img)
 
 # センターがずれたものを判定する関数
 def calcCenter(out_path, img):
@@ -90,7 +99,9 @@ def calcCenter(out_path, img):
 
   circles = cv2.HoughCircles(thresh, cv2.HOUGH_GRADIENT, dp=1, minDist=minDist, param1=30, param2=10, minRadius=minW, maxRadius=maxW)
 
-  # logger.debug(circles)
+  # cv2.imwrite(out_path, thresh)
+
+
 
   insideOfRange = False
 
@@ -112,7 +123,7 @@ def calcCenter(out_path, img):
 
         insideOfRange = True
 
-    # cv2.imwrite(out_path, img)
+    cv2.imwrite(out_path, img)
   else:
     logger.debug("検出なし")
 
@@ -189,26 +200,35 @@ def calcHist() -> None:
 
     if ret > HIST_THRESHOLD:
 
-      # 中心ずれの検証
-      insideOfRange = calcCenter(OUT_DIR + file, comparing_img)
+      # 画像に欠損がないか確認
+      loss = getLoss(comparing_img)
 
-      if insideOfRange:
-        logger.debug('ズレ検証OK: %s' % (file))
-        shutil.copyfile(comparing_img_path, OUT_DIR + file)
+      if not loss:
 
-        # スタビライズして保存
-        # stabilize(target_img_path, comparing_img_path, OUT_DIR + file)
 
-        target_hist = comparing_hist
-        target_img_path = comparing_img_path
+        # 中心ずれの検証
+        insideOfRange = calcCenter(OUT_DIR + file, comparing_img)
+
+        if insideOfRange:
+          logger.debug('OK: %s %s', file, ret)
+          shutil.copyfile(comparing_img_path, OUT_DIR + file)
+
+          # スタビライズして保存
+          # stabilize(target_img_path, comparing_img_path, OUT_DIR + file)
+
+          target_hist = comparing_hist
+          target_img_path = comparing_img_path
+
+        else:
+          logger.debug('--- ズレ検証NG: %s' % (file))
+          writeRemoveList(file)
 
       else:
-        logger.debug('ズレ検証NG: %s' % (file))
-        writeRemoveList(file)
+        logger.debug('--- 欠損発見: %s %s', file, ret)
 
 
     else:
-      logger.debug("REMOVE!!  %s  %s", file, ret)
+      logger.debug("--- 近似してない  %s  %s", file, ret)
       # os.remove(comparing_img_path)
       writeRemoveList(file)
 
